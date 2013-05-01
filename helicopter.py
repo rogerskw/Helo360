@@ -1,8 +1,8 @@
 import pygame
 import numpy
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import sys
-from datetime import datetime
+#from datetime import datetime
 
 # These values all relate to playing the signal at 44100 Hz
 header_len = 100
@@ -89,28 +89,23 @@ def test_script(t):
     bin_sig[8:28] = restofsignal()
     bin_sig[28:32] = checksum(bin_sig)
 
-#    print bin_sig
-    sig = create_audiosig(bin_sig)
-
+    print bin_sig
+    sig = create_audiosig(bin_sig)*60
+    print len(sig)
     pygame.mixer.init(44100,-16,1,2**16)
     num_ary = numpy.array(sig)
-#    plt.plot(num_ary)
-#    plt.savefig('generated_signal.jpg')
+    plt.plot(num_ary)
+    plt.savefig('generated_signal.jpg')
 
     if (sys.argv[1] == 'on'):
         s = pygame.sndarray.make_sound(num_ary)
         s.play()
 
-#    plt.show()
+    plt.show()
 
 if __name__ == '__main__':
-    start = datetime.now()
-    for j in xrange(1000):
-        for i in xrange(1,len(sys.argv)):
-            test_script(float(sys.argv[i]))
-    end = datetime.now()
-    total = end - start
-    print total/(1000*len(sys.argv))
+    test_script(float(sys.argv[2]))
+
 '''
 
 
