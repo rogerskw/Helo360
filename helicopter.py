@@ -9,8 +9,8 @@ header_len = 100
 bit_len = 48
 wait_len = 5199
 bits_per_sig = 32
-up_amp = 40000
-down_amp = -40000
+up_amp = 2**14
+down_amp = -(2**14)
 empty_amp = 0
 
 header = [down_amp]*header_len
@@ -20,6 +20,7 @@ off = [up_amp]*13 + [down_amp]*35
 sig = header + on*bits_per_sig + wait
 
 bin_sig = [0]*bits_per_sig
+s = None
 
 # Converts the binary signal array to the signal that the computer actually
 # outputs as audio
@@ -87,19 +88,21 @@ def throttle(trigger_val):
 def restofsignal(x_axis_val=0, y_axis_val=0):
     return [1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0]
 
-def create_bin_sig(throttle_val, x_axis_val, y_axis_val):
+def create_bin_sig(throttle_val=-1, x_axis_val=0, y_axis_val=0):
     bin_sig[0:8] = throttle(throttle_val)
     bin_sig[8:28] = restofsignal(x_axis_val,y_axis_val)
     bin_sig[28:32] = checksum(bin_sig)
 
 def test_script(t):
+
     bin_sig[0:8] = throttle(t)
     bin_sig[8:28] = restofsignal()
     bin_sig[28:32] = checksum(bin_sig)
 
-    sig = create_audiosig(bin_sig)*60
+    print bin_sig
+    sig = create_audiosig(bin_sig)*1000
+    pygame.mixer.init(44100,-16,1)
 
-    pygame.mixer.init(44100,-16,1,2**16)
 
     num_ary = numpy.array(sig,dtype=numpy.dtype('int16'))
     if (sys.argv[1] == 'on'):
@@ -113,22 +116,28 @@ if __name__ == '__main__':
     test_script(float(sys.argv[2]))
 
 '''
+    x360.init()
+    pygame.init()
+    pygame.mixer.init(44100,-16,1)
 
 if __name__ == '__main__':
     pygame.init()
-    pygame.mixer.init()
-    pygame.joystick.init()
-    x360 = pygame.joystick.Joystick(0)
-    x360.init()
-
+    pygame.mixer.init(44100,-16,1)
     while True:
         pygame.event.wait() # Wait for something to happen before doing anything
         # Left stick is axis 0 and 1, right trigger is axis 5
         x_axis = x360.get_axis(0)
         y_axis = x360.get_axis(1)
-        throttle = x360.get_axis(5)
-        print throttle
-        print x_axis
-        print y_axis
+        throttle_trig = x360.get_axis(5)
+        create_bin_sig(throttle_trig,x_axis,y_axis)
+        sig = create_audiosig(bin_sig)*120
+        if (s != None):
+            s.stop()
+        s = pygame.sndarray.make_sound(sig)
+        s.play()
+
+
+    s = pygame.sndarray.make_sound(sig)
+    s.play()
 
 '''
