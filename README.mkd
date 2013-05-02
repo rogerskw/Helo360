@@ -1,10 +1,12 @@
-## Helo360 - Xbox 360 Controlled HELO TC
+## Helo360 - HELO TC Using an Xbox 360 Controller
 
 Helo360 is a Python project for controlling the [Griffin HELO TC](http://www.griffintechnology.com/helo-tc-touch-controlled-toy-helicopter). 
 
 ### IMPORTANT
 
 As of 5/2/13, Helo360 only controls the throttle on the HELO TC. The remaining functions are in progress.
+
+In addition, Helo360 only uses Channel A.
 
 #### Requirements
 
@@ -63,3 +65,24 @@ Helo360 utilizes the pygame.joystick.Joystick and pygame.mixer modules in order 
 
 In order to provide real-time control of the helicopter, the program pumps pygame.event and looks at the relevant controls. If any of the controls are significantly different than what they were previously (in the case of triggers this means abs(prev-curr)>.1), then the program makes a new signal and begins playback, otherwise it does nothing. This is so that the signal remains clean and is not constantly restarted.
 
+#### The Reverse Engineering
+
+The first step was to get a recording of the signal being played from the smartphone app. A male-to-male audio cable was plugged into the headphones jack on an iPhone 4 and into the microphone port on a PC. The app was started, volume turned all the way up, and throttle set to max. The PC then recorded the signal for about 10 seconds at 44.1 kHz. The recorded signal was saved into a wav file.
+
+The wav file was read into MATLAB and the signal plotted. It resulted in the following plot:
+
+![Plot of many recorded pulses](http://i.imgur.com/4EZOpia.jpg)
+
+Focusing on a single pulse in the file give the following plot:
+
+![Plot of a single pulse](http://i.imgur.com/FhqMgCe.jpg)
+
+Looking at any given pulse gives about the same image, with varying amounts of noise. It is apparent from the plot that the signal is a series of highs and lows, with a single, longer low at the beginning. It is also apparent that the time between the start of every high value is always the same, 48 samples. Following every high value is a low value. There are two types of high/low pairs. One type has a long high and short low, the other is the opposite. The long high pair was arbitrarily defined as a 1 and short high pair a 0.
+
+The next step is to compare the pulse to another pulse recorded from a slightly varying input. Only throttle was changed. when looking at the pulse, only the first 8 bits and last 4 bits changed. When only changing direction, the second byte and last 4 bits were the only ones that changed.
+
+Eventually, it became apparent that the first byte was what defined the throttle and the next byte controller direction. The last 4 bits changed during most variations on the signal. This suggested that the last 4 bits were a checksum. A number of checksum techniques were experimented with until one was found that matched all recorded signals.
+
+The checksum does binary addition on the first three bytes. Overflow is that carried over and added to the checksum. Then, the 4 most significant bits are used as the checksum.
+
+Calculated the number of samples for each element (header, high, low, wait between pulses) was done mostly through trial and error. Using MATLAB, the values were changed until they aligned with the pulse in a plot. Then, they were compared 15 pulses in the future in order to ensure that they still lined up correctly.  The generated array was then played using sound(x,fs) with the IR emitter connect to the computer. Eventually, the values were able get the helicopter to react.
