@@ -1,0 +1,40 @@
+## Helo360 - Xbox 360 Controlled HELO TC
+
+Helo360 is a Python project for controlling the [Griffin HELO TC](http://www.griffintechnology.com/helo-tc-touch-controlled-toy-helicopter). 
+
+#### About Griffin HELO TC
+
+The Griffin HELO TC was designed as a smartphone-controlled RC helicopter. It comes with the helicopter and a IR emitter device. The IR emitter plugs into the headphones jack on any smartphone. The smartphone uses an app designed by Griffin to send an audio signal to the IR emitter. The IR emitter then sends a signal to the helicopter to control it. 
+
+The HELO TC app uses the following interface to control the helicopter. 
+
+![HELO TC app interface](http://i.imgur.com/u6Mx3g4.png)
+
+The app allows the user to specify 
+
+ * Throttle
+ * Direction
+ * Trim
+ * Lights toggle
+ * Launchable missiles (certain models)
+ 
+#### The Goal of This Project
+
+The purpose of this project is to have all of the functionality of the HELO TC smartphone app from an Xbox 360 controller. Using the triggers to specify throttle, the joysticks to control motion, bumpers for trim, and face buttons for lights and missles, the user should be able to control the helicopter as if they were using the native app.
+
+#### How the App Works
+
+The app is relatively straightforward. Based on the user input, the app produces an audio pulse. The pulses are at about 6 Hz. Each of these pulses in a set of new information for the helicopter. The pulse is sent into the IR emitter which then sends the information to the helicopter. Taking a closer look at the signal shows that each pulse is a header followed by 32 bit signal. 
+
+Every sample in the signal is one of three values - Positive (High), Negative (Low), or 0. At 44.1 kHz the header is a low signal for 100 samples. After the header has been sent, the 32 bits are sent. Each bit is 48 samples, first an high then a low. If the bit is 1, the high signal is 33 samples followed by 15 samples at low. A 0 bit is a high signal for 13 samples followed by 35 samples at low.
+
+The 32 bit signal is broken down as follows:
+
+ * [0,7] : Throttle
+ * [8,11] : Left/Right (X axis movement)
+ * [12,15] : Forward/Backward (Y axis movement)
+ * [16,23] : Trim
+ * [24,27] : Special (lights/missiles)
+ * [28,32] : Checksum
+ 
+The checksum works by taking each of the first three bytes and performing binary addition. Any overflow is then added back into the checksum. Then the 4 most significant bits are used as the checksum.
