@@ -2,6 +2,24 @@
 
 Helo360 is a Python project for controlling the [Griffin HELO TC](http://www.griffintechnology.com/helo-tc-touch-controlled-toy-helicopter). 
 
+### IMPORTANT
+
+As of 5/2/13, Helo360 only controls the throttle on the HELO TC. The remaining functions are in progress.
+
+#### Requirements
+
+Helo360 requires [pygame](http://www.pygame.org) and [numpy](http://http://www.numpy.org/)
+
+#### How to Use Helo360
+
+First, ensure that pygame and numpy are installed. Next, connect the Xbox 360 controller to the computer. It is important to ensure that the Xbox 360 controller is the *only* controller connected to the computer. Now, plug the IR emitter into the audio port. Turn volume all the way up. Navigate to the directory that helo360.py is located. Run the following command:
+
+` python helo360.py `
+
+The terminal will start to print many different pieces of information about the status of the controller. 
+
+The program should now be able to control the HELO TC.
+
 #### About Griffin HELO TC
 
 The Griffin HELO TC was designed as a smartphone-controlled RC helicopter. It comes with the helicopter and a IR emitter device. The IR emitter plugs into the headphones jack on any smartphone. The smartphone uses an app designed by Griffin to send an audio signal to the IR emitter. The IR emitter then sends a signal to the helicopter to control it. 
@@ -16,7 +34,7 @@ The app allows the user to specify
  * Direction
  * Trim
  * Lights toggle
- * Launchable missiles (certain models)
+ * Launchable missiles (only Assault model)
  
 #### The Goal of This Project
 
@@ -38,3 +56,10 @@ The 32 bit signal is broken down as follows:
  * [28,32] : Checksum
  
 The checksum works by taking each of the first three bytes and performing binary addition. Any overflow is then added back into the checksum. Then the 4 most significant bits are used as the checksum.
+
+#### How Helo360 Works
+
+Helo360 utilizes the pygame.joystick.Joystick and pygame.mixer modules in order to control the helicopter. Based on joystick input, the program creates an array of 0's and 1's like the pulses created by the app. Then, this array is used to create the actual audio signal, converting a 0 to [2\*\*14]\*13 + [-2\*\*14]\*35 and a 1 to [2\*\*14]\*33 + [-2\*\*14]\*15. This array is now added to a header array and a wait array. From here, the array is an exact representation of the sound sent from the smartphone, at 44.1 kHz. pygame.mixer has a function that allows converting a numpy array to a Sound object, as if the array was a wav file. So, the next step is to convert the array to a numpy array and call pygame.mixer.makesnd(). Now, the sound is ready to be played.
+
+In order to provide real-time control of the helicopter, the program pumps pygame.event and looks at the relevant controls. If any of the controls are significantly different than what they were previously (in the case of triggers this means abs(prev-curr)>.1), then the program makes a new signal and begins playback, otherwise it does nothing. This is so that the signal remains clean and is not constantly restarted.
+
