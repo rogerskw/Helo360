@@ -1,6 +1,5 @@
 import pygame
 import numpy
-import sys
 
 bits_per_byte = 8
 
@@ -20,7 +19,7 @@ off = [up_amp]*13 + [down_amp]*35
 sig = header + on*bits_per_sig + wait
 
 bin_sig = [0]*bits_per_sig
-s = None
+s = None # This is the actual sound
 
 # Converts the binary signal array to the signal that the computer actually
 # outputs as audio
@@ -83,61 +82,47 @@ def checksum(binary_sig):
 def throttle(trigger_val):
     return num2binary(trigger_val,8,-1,1)
 
-# This just substitues in standard values for the signal that is not throttle
-# or checksum. These values should be zero x,y movement.
-def restofsignal(x_axis_val=0, y_axis_val=0):
-    return [1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0]
+def movement(x_axis_val, y_axis_val):
+    return [1,0,0,0,1,0,0,0]
 
-def create_bin_sig(throttle_val=-1, x_axis_val=0, y_axis_val=0):
+def special(trimright,trimleft,lights,missiles):
+    return [0,1,0,0,0,0,0,0,0,0,0,0]
+
+def create_bin_sig(throttle_val=-1, x_axis_val=0, y_axis_val=0, trimright=False, trimleft=False, lights=False, missiles=False):
     bin_sig[0:8] = throttle(throttle_val)
-    bin_sig[8:28] = restofsignal(x_axis_val,y_axis_val)
+    bin_sig[8:16] = movement(x_axis_val,y_axis_val)
+    bin_sig[16:28] = special(trimright,trimleft,lights,missiles)
     bin_sig[28:32] = checksum(bin_sig)
 
-def test_script(t):
-
-    bin_sig[0:8] = throttle(t)
-    bin_sig[8:28] = restofsignal()
-    bin_sig[28:32] = checksum(bin_sig)
-
-    print bin_sig
-    sig = create_audiosig(bin_sig)*1000
-    pygame.mixer.init(44100,-16,1)
-
-
-    num_ary = numpy.array(sig,dtype=numpy.dtype('int16'))
-    if (sys.argv[1] == 'on'):
-        s = pygame.sndarray.make_sound(num_ary)
-        s.play()
-
-    while (pygame.mixer.get_busy()):
-        None
 
 if __name__ == '__main__':
-    test_script(float(sys.argv[2]))
 
-'''
+    pygame.init()
+    pygame.mixer.quit() # We need to quit because pygame.init() initializes mixer to 2 channels
+    pygame.mixer.init(44100,-16,1)
+
+    x360 = pygame.joystick.Joystick(0)
     x360.init()
-    pygame.init()
-    pygame.mixer.init(44100,-16,1)
+    pygame.event.wait()
+    x_axis_prev = int(x360.get_axis(0)*10)/10.0
+    y_axis_prev = int(x360.get_axis(1)*10)/10.0
+    throttle_trig_prev = int(x360.get_axis(5)*10)/10.0
 
-if __name__ == '__main__':
-    pygame.init()
-    pygame.mixer.init(44100,-16,1)
     while True:
-        pygame.event.wait() # Wait for something to happen before doing anything
+        pygame.event.pump()
         # Left stick is axis 0 and 1, right trigger is axis 5
-        x_axis = x360.get_axis(0)
-        y_axis = x360.get_axis(1)
-        throttle_trig = x360.get_axis(5)
-        create_bin_sig(throttle_trig,x_axis,y_axis)
-        sig = create_audiosig(bin_sig)*120
-        if (s != None):
-            s.stop()
-        s = pygame.sndarray.make_sound(sig)
-        s.play()
+        x_axis = int(x360.get_axis(0)*10)/10.0
+        y_axis = int(x360.get_axis(1)*10)/10.0
+        throttle_trig = int(x360.get_axis(5)*10)/10.0
+        print throttle_trig
+        if (throttle_trig != throttle_trig_prev):
+            x_axis_prev = x_axis
+            y_axis_prev = y_axis
+            throttle_trig_prev = throttle_trig
+            create_bin_sig(throttle_trig,x_axis,y_axis)
+            audio_sig = create_audiosig(bin_sig)*120
+            num_audio_sig = numpy.array(audio_sig,dtype=numpy.dtype('int16'))
+            pygame.mixer.stop()
+            s = pygame.sndarray.make_sound(num_audio_sig)
+            s.play()
 
-
-    s = pygame.sndarray.make_sound(sig)
-    s.play()
-
-'''
